@@ -1,0 +1,20 @@
+import serial
+#import keyboard
+
+try:
+    ser = serial.Serial('COM4', baudrate=57600)
+    ser.flushInput()
+
+    while True:
+        ser_bytes = ser.readline()
+        print(ser_bytes)
+        file = open("testfile.csv", "a")
+        file.write(str(ser_bytes))
+        file.close()
+        
+ #       if keyboard.is_pressed('esc'):
+ #           break;
+    ser.close
+except:
+    print("Unexpected error:", sys.exc_info()[0])
+    print("Unexpected error:", sys.exc_info()[1])

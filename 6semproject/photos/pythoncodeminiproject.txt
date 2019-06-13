@@ -1,0 +1,159 @@
+import tensorflow as t
+from keras.models import Sequential
+from keras.layers import Dense,Dropout
+from keras.layers import LSTM
+import pandas as pd
+import numpy as np
+from keras.wrappers.scikit_learn import KerasClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import MinMaxScaler
+from keras.layers import BatchNormalization
+from keras.utils import to_categorical
+from sklearn.metrics import accuracy_score
+from keras.layers import Input
+def preprocess(url1,url2):
+    dataframe=pd.read_csv(url1)
+    d=pd.read_csv(url2)
+    x_train=dataframe[['Temp in F','Humidity']]
+    #print(x_train)
+    y_train=dataframe[['rainfall','weather condition']]
+    #print(y_train)
+    x_test=d[['Temp in F','Humidity']]
+    #print(x_test)
+    y_test=d[['rainfall','weather condition']]
+    #print(y_test)
+    min_max_scaler =MinMaxScaler()
+    #x_train= min_max_scaler.fit_transform(x_train)
+    '''
+    print("X_TRAIN IS:")
+    print(x_train)
+    '''
+    #x_test=min_max_scaler.fit_transform(x_test)
+    '''
+    print("X_TEST IS:")
+    print(x_test)
+    '''
+    #print(y_test1)
+    test=dataframe[['weather condition']].replace('Fair',0)
+    test1=test[['weather condition']].replace('Haze',1)
+    test2=test1[['weather condition']].replace('Fog',2)
+    test3=test2[['weather condition']].replace('partly cloudy',3)
+    test4=test3[['weather condition']].replace('Mostly cloudy',4)
+    '''
+    print("TEST is:")
+    print(test4)
+    '''
+    y_train1=y_train.drop('weather condition',axis=1)
+    #print(y_train1)
+    y_train1.insert(1,'weather condition',test4)
+    '''
+    print("Y_TRAIN IS:")
+    print(y_train1)
+    '''
+
+    test=dataframe[['weather condition']].replace('Fair',0)
+    test1=test[['weather condition']].replace('Haze',1)
+    test2=test1[['weather condition']].replace('Fog',2)
+    test3=test2[['weather condition']].replace('partly cloudy',3)
+    test4=test3[['weather condition']].replace('Mostly cloudy',4)
+    y_test1=y_test.drop('weather condition',axis=1)
+    y_test1.insert(1,'weather condition',test4)
+    return x_train,x_test,y_train1,y_test1
+
+def modeltrain1(X_train,Y_train,X_test,Y_test):
+    model=Sequential()
+    #input layer)
+    model.add(Dense(units=2,activation='linear',use_bias=True))
+    #model.add(Dense(2))
+    #hidden layers
+    model.add(BatchNormalization())
+    model.add(LSTM(units=2,activation='tanh',return_sequences=True,use_bias=True))
+    model.add(Dropout(0.4))
+    model.add(Dense(units=128,activation='linear',use_bias=True))
+    model.add(LSTM(units=128,activation='tanh',return_sequences=True,use_bias=True))
+    model.add(Dropout(0.4))
+    model.add(Dense(units=32,activation='linear',use_bias=True))
+    model.add(LSTM(units=32,activation='tanh',return_sequences=True,use_bias=True))
+    model.add(Dropout(0.4))
+    #output layer
+    model.add(Dense(units=1,activation='linear',use_bias=True))
+    model.compile(loss='mean_squared_error',optimizer='adam',metrics=['mae'])
+    model.fit(X_train,Y_train,epochs=100,validation_split=0.1,validation_data=(X_test,Y_test),verbose=2)
+    print(model.summary())
+    return model
+def modeltrainweather1(X_train,Y_train1):
+    model=Sequential()
+    #input layer
+    model.add(Dense(units=2,batch_size=5,use_bias=True))
+    #model.add(BatchNormalization())
+    #model.add(Dense(2))
+    #hidden layers
+    model.add(LSTM(units=64,return_sequences=True,use_bias=True))
+    model.add(Dense(units=128,use_bias=True))
+    model.add(LSTM(units=64,return_sequences=True,use_bias=True))
+    model.add(Dense(units=128,use_bias=True))
+    model.add(LSTM(units=64,return_sequences=True,use_bias=True))
+    #output layer
+    model.add(Dense(units=5,use_bias=True))
+    model.compile(loss='binary_crossentropy',optimizer='adam',metrics=['binary_accuracy'],verbose=2)
+    model.fit(X_train,Y_train1,epochs=175,verbose=2)
+    return model
+
+def testandeval(model,X_test,Y_test):
+    Model=model
+    print(X_test)
+    pred=Model.predict(X_test)
+    print(pred.shape)
+    score=Model.evaluate(X_test,Y_test,verbose=1)
+    print("",score[0])
+    print("",score[1])
+def modeleval(model,X_test,Y_test):
+    pred1=model.predict_classes(X_test)
+    print(pred1)
+    pred1=np.reshape(pred1,(pred1.shape[0]))
+    Y_test=np.reshape(Y_test,(Y_test.shape[0]))
+    print(Y_test.shape)
+    pred1=np.reshape(pred1,(pred1.shape[0]))
+    print(Y_test)
+    acc=accuracy_score(pred1,Y_test)
+    print("Accuracy score:",acc)
+url1='C:\\Users\\Yadav\\Desktop\\mini project folder\\train.csv'
+url2='C:\\Users\\Yadav\\Desktop\\mini project folder\\test.csv'
+a,b,c,d=preprocess(url1,url2)
+a=np.array(a)
+X_train=a
+b=np.array(b)
+c1=c['rainfall']
+c=c['weather condition']
+d1=d['rainfall']
+d=d['weather condition']
+c1=np.array(c1)
+d1=np.array(d1)
+c=np.array(c)
+d=np.array(d)
+a=np.reshape(a,(a.shape[0], 1, a.shape[1]))
+b=np.reshape(b,(b.shape[0], 1, b.shape[1]))
+c1=np.reshape(c1,(c1.shape[0],1,1))
+c=np.reshape(c,(c.shape[0],1,1))
+d1=np.reshape(d1,(d1.shape[0],1,1))
+d=np.reshape(d,(d.shape[0],1,1))
+
+c=to_categorical(c,num_classes=5)
+#d=to_categorical(d,num_classes=5)
+'''
+print(a)
+print(b)
+print(c)
+print(d)
+print(c1)
+print(d1)
+'''
+print("--------------------------------------------------------------------")
+'''
+print("Rainfall prediction............................................")
+model123=modeltrain1(a,c1,b,d1)
+testandeval(model123,b,d1)
+'''
+print("Weather prediction............................................")
+M=modeltrainweather1(a,c)
+modeleval(M,b,d)
